@@ -6,6 +6,9 @@ from src.data import load_raw_text, build_dataset, with_format
 from src.trainer import create_training_arguments, create_data_collator, perplexity
 from src.utils import set_seed, ensure_dir, count_trainable_parameters, human_readable
 from transformers import TrainerCallback
+import yaml
+import mlflow, os, time
+from src.callbacks import PerplexityAndMLflowCallback, EarlyStoppingCallback
 
 from transformers import Trainer
 
@@ -44,23 +47,46 @@ def main():
     print(f"Train examples (blocks): {len(train_ds)}  Eval blocks: {len(eval_ds)}")
     print(f"Parameters (trainable): {human_readable(count_trainable_parameters(model))}")
 
-    trainer = Trainer(
-        model=model,
-        args=training_args,
-        train_dataset=train_ds,
-        eval_dataset=eval_ds,
-        data_collator=data_collator,
-        callbacks=[PerplexityCallback()]
-    )
 
+# Load mlflow config
+    mlflow_cfg = yaml.safe_load(open('config/mlflow_config.yaml'))
+    tracking_uri = mlflow_cfg.get('tracking_uri')
+    if tracking_uri: mlflow.set_tracking_uri(tracking_uri)
+    exp_name = mlflow_cfg.get('experiment_name', 'default')
+    mlflow.set_experiment(exp_name)
 
-    trainer.train()
-    metrics = trainer.evaluate()
-    metrics = perplexity(metrics)
-    print(metrics)
+    run_name = mlflow_cfg.get('run_name') or f"gpt2-shakespeare-{int(time.time())}"
+    with mlflow.start_run(run_name=run_name) as run:
+        # Log static params
+        mlflow.log_params({
+            'model_name': mc.model_name,
+            'block_size': tc.block_size,
+            'lr': tc.learning_rate,
+            'epochs': tc.num_train_epochs,
+            'batch_size_per_device': tc.per_device_train_batch_size,
+            'grad_accum': tc.gradient_accumulation_steps
+        })
 
-    trainer.save_model(tc.output_dir)
-    tokenizer.save_pretrained(tc.output_dir)
+        if tc.use_gradient_checkpointing:
+            model.config.use_cache = False
+            model.gradient_checkpointing_enable()
+
+        trainer = Trainer(
+            model=model,
+            args=training_args,
+            train_dataset=train_ds,
+            eval_dataset=eval_ds,
+            data_collator=data_collator,
+        )
+
+        trainer.add_callback(PerplexityAndMLflowCallback(mlflow))
+        trainer.add_callback(EarlyStoppingCallback(patience=2, min_delta=0.0))
+
+        trainer.train()
+        final_metrics = trainer.evaluate()
+        if 'eval_loss' in final_metrics:
+            mlflow.log_metric('final_eval_loss', final_metrics['eval_loss'])
+        mlflow.log_artifacts(tc.output_dir)  # saves model, tokenizer
 
 if __name__ == "__main__":
     main()
