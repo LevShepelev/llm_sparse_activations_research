@@ -37,6 +37,8 @@ class TrainConfig:
     eval_fraction: float = 0.05
     push_to_hub: bool = False
     report_to: str = "none"
+    use_gradient_checkpointing: bool = False
+    mlflow_autolog: bool = True
 
 def load_yaml(path: str) -> dict:
     with open(path, "r") as f:

@@ -4,9 +4,9 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 def parse_args():
     ap = argparse.ArgumentParser()
     ap.add_argument('--model_dir', default='outputs/gpt2-shakespeare')
-    ap.add_argument('--prompt', default='To be, or not to be')
-    ap.add_argument('--max_new_tokens', type=int, default=80)
-    ap.add_argument('--temperature', type=float, default=0.8)
+    ap.add_argument('--prompt', default='ROMEO:')
+    ap.add_argument('--max_new_tokens', type=int, default=200)
+    ap.add_argument('--temperature', type=float, default=0.5)
     ap.add_argument('--top_k', type=int, default=50)
     ap.add_argument('--top_p', type=float, default=0.95)
     ap.add_argument('--num_return_sequences', type=int, default=1)
@@ -38,6 +38,4 @@ if __name__ == '__main__':
     torch.manual_seed(args.seed)
     outputs = generate(model, tokenizer, args.prompt, args.max_new_tokens, args.temperature, args.top_k, args.top_p, args.num_return_sequences)
     for i, o in enumerate(outputs):
-        print(f"===== Sample {i+1} =====
-{o}
-")
+        print(f"===== Sample {i+1} ====={o}")
