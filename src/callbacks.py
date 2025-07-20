@@ -1,47 +1,69 @@
-from transformers import TrainerCallback
-import math, time
+import math, numbers, time
+from pathlib import Path
+import matplotlib.pyplot as plt
+from transformers import TrainerCallback, TrainingArguments, TrainerState, TrainerControl
+import mlflow
+
+
+def _is_num(x):
+    return isinstance(x, numbers.Number) and math.isfinite(x)
+
 
 class PerplexityAndMLflowCallback(TrainerCallback):
-    def __init__(self, mlflow, run_id=None):
-        self.mlflow = mlflow
-        self.run_id = run_id
-        self.best_eval_loss = math.inf
-        self.best_step = -1
+    """
+    • Logs train_loss every `logging_steps`
+    • Logs eval_loss & perplexity every `eval_steps`
+    • Builds and uploads a perplexity-vs-step PNG at the end
+    """
 
-    def on_log(self, args, state, control, logs=None, **kwargs):
-        if logs is None: return
-        if self.mlflow:
-            for k, v in logs.items():
-                if isinstance(v, (int, float)):
-                    self.mlflow.log_metric(k, v, step=state.global_step)
+    def __init__(self):
+        self.perp_history = []        # (step, perplexity)
 
-    def on_evaluate(self, args, state, control, metrics=None, **kwargs):
-        if metrics is None: return
-        eval_loss = metrics.get("eval_loss")
-        if eval_loss is not None and eval_loss < self.best_eval_loss:
-            self.best_eval_loss = eval_loss
-            self.best_step = state.global_step
-        # Log perplexity explicitly
-        if "eval_loss" in metrics:
-            ppl = math.exp(metrics["eval_loss"]) if metrics["eval_loss"] < 20 else float('inf')
-            if self.mlflow:
-                self.mlflow.log_metric("perplexity", ppl, step=state.global_step)
+    # ----- Training-side logging -----
+    def on_log(self,
+               args: TrainingArguments,
+               state: TrainerState,
+               control: TrainerControl,
+               logs=None, **kwargs):
+        if logs is None:
+            return
+        loss = logs.get("loss")
+        lr   = logs.get("learning_rate")
+        if _is_num(loss):
+            mlflow.log_metric("train_loss", loss, step=state.global_step)
+        if _is_num(lr):
+            mlflow.log_metric("lr", lr, step=state.global_step)
 
-class EarlyStoppingCallback(TrainerCallback):
-    def __init__(self, patience=2, min_delta=0.0):
-        self.patience = patience
-        self.min_delta = min_delta
-        self.best = math.inf
-        self.bad_epochs = 0
+    # ----- Validation -----
+    def on_evaluate(self,
+                    args: TrainingArguments,
+                    state: TrainerState,
+                    control: TrainerControl,
+                    metrics=None, **kwargs):
+        if metrics is None:
+            return
+        ev_loss = metrics.get("eval_loss")
+        if _is_num(ev_loss):
+            ppl = math.exp(ev_loss)
+            self.perp_history.append((state.global_step, ppl))
+            mlflow.log_metric("eval_loss", ev_loss, step=state.global_step)
+            mlflow.log_metric("perplexity", ppl, step=state.global_step)
 
-    def on_evaluate(self, args, state, control, metrics=None, **kwargs):
-        loss = metrics.get("eval_loss") if metrics else None
-        if loss is None: return
-        if loss < self.best - self.min_delta:
-            self.best = loss
-            self.bad_epochs = 0
-        else:
-            self.bad_epochs += 1
-            if self.bad_epochs >= self.patience:
-                control.should_training_stop = True
-                print(f"Early stopping triggered at step {state.global_step}")
+    # ----- End of training -----
+    def on_train_end(self,
+                     args: TrainingArguments,
+                     state: TrainerState,
+                     control: TrainerControl, **kwargs):
+        if not self.perp_history:
+            return
+        steps, ppl = zip(*self.perp_history)
+        plt.figure()
+        plt.plot(steps, ppl, linewidth=2)
+        plt.xlabel("Global step")
+        plt.ylabel("Perplexity (val set)")
+        plt.title("GPT-2-small on Shakespeare")
+        out_png = Path(args.output_dir) / "perplexity.png"
+        plt.tight_layout()
+        plt.savefig(out_png)
+        plt.close()
+        mlflow.log_artifact(str(out_png))
