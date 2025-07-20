@@ -24,3 +24,5 @@ shuffle_buffer: 10000
 eval_fraction: 0.02
 push_to_hub: false
 report_to: none
+use_gradient_checkpointing: true
+mlflow_autolog: true
