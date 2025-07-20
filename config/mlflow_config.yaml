@@ -1,5 +1,4 @@
 ## config/mlflow_config.yaml
-```yaml
 # Basic MLflow settings
 experiment_name: "gpt2-shakespeare"
 run_name: null            # auto-generate if null

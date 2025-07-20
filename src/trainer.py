@@ -9,7 +9,6 @@ def create_training_arguments(tc):
     return TrainingArguments(
         output_dir=tc.output_dir,
         overwrite_output_dir=True,
-        evaluation_strategy="steps",
         logging_steps=tc.logging_steps,
         save_steps=tc.save_steps,
         eval_steps=tc.eval_steps,

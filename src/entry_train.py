@@ -1,13 +1,19 @@
 import argparse
 from pathlib import Path
-from .config import load_model_config, load_train_config
-from .model import load_tokenizer_and_model
-from .data import load_raw_text, build_dataset, with_format
-from .trainer import create_training_arguments, create_data_collator, perplexity
-from .utils import set_seed, ensure_dir, count_trainable_parameters, human_readable
+from src.config import load_model_config, load_train_config
+from src.model import load_tokenizer_and_model
+from src.data import load_raw_text, build_dataset, with_format
+from src.trainer import create_training_arguments, create_data_collator, perplexity
+from src.utils import set_seed, ensure_dir, count_trainable_parameters, human_readable
+from transformers import TrainerCallback
 
 from transformers import Trainer
 
+class PerplexityCallback(TrainerCallback):
+    def on_evaluate(self, args, state, control, metrics=None, **kwargs):
+        if metrics is not None:
+            perplexity(metrics)
+            
 def parse_args():
     ap = argparse.ArgumentParser()
     ap.add_argument("--model_config", default="config/model_config.yaml")
@@ -25,7 +31,7 @@ def main():
 
     tokenizer, model, _ = load_tokenizer_and_model(mc.model_name, mc.add_special_tokens, mc.resize_token_embeddings)
 
-    raw_path = Path(args.data_dir) / args.pattern
+    raw_path = Path(args.data_dir)
     text = load_raw_text(str(raw_path))
 
     train_ds, eval_ds = build_dataset(tokenizer, text, tc.block_size, tc.eval_fraction)
@@ -44,11 +50,9 @@ def main():
         train_dataset=train_ds,
         eval_dataset=eval_ds,
         data_collator=data_collator,
+        callbacks=[PerplexityCallback()]
     )
 
-    trainer.add_callback(type("PerplexityCallback", (), {
-        "on_evaluate": lambda self, args, state, control, metrics, **kw: perplexity(metrics)
-    })())
 
     trainer.train()
     metrics = trainer.evaluate()
