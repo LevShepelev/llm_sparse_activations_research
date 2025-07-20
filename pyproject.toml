@@ -1,0 +1,31 @@
+[tool.poetry]
+name = "gpt2-shakespeare-mlflow"
+version = "0.1.0"
+description = "Fine-tune GPT-2 small on Shakespeare texts with MLflow tracking"
+authors = ["Your Name <you@example.com>"]
+readme = "README.md"
+license = "MIT"
+packages = [{ include = "src" }]
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.13"
+torch = ">=2.2.0"
+transformers = ">=4.40.0"
+datasets = ">=2.19.0"
+tqdm = "*"
+pyyaml = "*"
+accelerate = ">=0.29.0"
+mlflow = ">=2.11.0" # logging metrics, params, artifacts
+bitsandbytes = {version = "*", markers = "sys_platform != 'win32'"}
+
+[tool.poetry.group.dev.dependencies]
+ipykernel = "*"
+black = "*"
+ruff = "*"
+
+[tool.poetry.scripts]
+train-gpt2-shakespeare = "src.entry_train:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

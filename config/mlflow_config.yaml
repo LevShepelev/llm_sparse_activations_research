@@ -1,0 +1,8 @@
+## config/mlflow_config.yaml
+```yaml
+# Basic MLflow settings
+experiment_name: "gpt2-shakespeare"
+run_name: null            # auto-generate if null
+tracking_uri: null        # e.g. file:mlruns, http://localhost:5000, or leave null for default
+log_models: true
+log_system_metrics: true

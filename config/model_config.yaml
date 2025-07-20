@@ -1,0 +1,7 @@
+model_name: "gpt2"
+resize_token_embeddings: true
+use_gradient_checkpointing: true
+add_special_tokens:
+  pad_token: "<|pad|>"
+  bos_token: null
+  eos_token: null
