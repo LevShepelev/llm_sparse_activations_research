@@ -1,9 +1,9 @@
 seed: 42
 output_dir: "outputs/gpt2-shakespeare"
 logging_steps: 10
-eval_steps: 10
+eval_steps: 20
 save_steps: 1000
-evaluation_strategy: "steps"
+eval_strategy: "steps"
 save_total_limit: 3
 warmup_steps: 200
 max_train_steps: null
