@@ -8,7 +8,7 @@ from src.utils import set_seed, ensure_dir, count_trainable_parameters, human_re
 from transformers import TrainerCallback
 import yaml
 import mlflow, os, time
-from src.callbacks import PerplexityAndMLflowCallback
+from src.callbacks import PerplexityAndMLflowCallback, EarlyStoppingCallback
 
 from transformers import Trainer
 
@@ -79,11 +79,12 @@ def main():
             data_collator=data_collator,
         )
 
-<<<<<<< HEAD
         trainer.add_callback(PerplexityAndMLflowCallback(mlflow))
-=======
-        trainer.add_callback(PerplexityAndMLflowCallback())
->>>>>>> c481ca6857f3652566c5aa474911f10187b31e47
+        trainer.add_callback(EarlyStoppingCallback(patience=2, min_delta=0.0))
+        print(">>> total_optim_steps =", trainer._get_train_sampler().__len__() //
+            (tc.gradient_accumulation_steps))
+        print(">>> eval_steps        =", training_args.eval_steps)
+        print(">>> evaluation_strategy =", training_args.evaluation_strategy)
 
         trainer.train()
         final_metrics = trainer.evaluate()
