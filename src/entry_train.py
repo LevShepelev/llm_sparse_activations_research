@@ -32,7 +32,14 @@ def main():
     set_seed(tc.seed)
     ensure_dir(tc.output_dir)
 
-    tokenizer, model, _ = load_tokenizer_and_model(mc.model_name, mc.add_special_tokens, mc.resize_token_embeddings)
+    # entry_train.py
+    tokenizer, model = load_tokenizer_and_model(
+            mc.model_name,
+            mc.add_special_tokens,
+            mc.resize_token_embeddings,
+            from_scratch=True          # ← set by CLI flag or config
+    )
+
 
     raw_path = Path(args.data_dir)
     text = load_raw_text(str(raw_path))
