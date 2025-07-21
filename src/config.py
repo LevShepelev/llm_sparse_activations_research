@@ -17,6 +17,7 @@ class TrainConfig:
     save_steps: int = 1000
     save_total_limit: int = 3
     eval_steps: int = 500
+    evaluation_strategy: str = "steps"
     warmup_steps: int = 200
     max_train_steps: Optional[int] = None
     num_train_epochs: int = 3
