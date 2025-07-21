@@ -12,6 +12,7 @@ def create_training_arguments(tc):
         logging_steps=tc.logging_steps,
         save_steps=tc.save_steps,
         eval_steps=tc.eval_steps,
+        eval_strategy=tc.eval_strategy,
         save_total_limit=tc.save_total_limit,
         per_device_train_batch_size=tc.per_device_train_batch_size,
         per_device_eval_batch_size=tc.per_device_eval_batch_size,
