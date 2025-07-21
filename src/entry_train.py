@@ -80,7 +80,6 @@ def main():
         )
 
         trainer.add_callback(PerplexityAndMLflowCallback(mlflow))
-        trainer.add_callback(EarlyStoppingCallback(patience=2, min_delta=0.0))
 
         trainer.train()
         final_metrics = trainer.evaluate()
